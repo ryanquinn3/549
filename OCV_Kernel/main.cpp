@@ -6,17 +6,35 @@ using namespace cv;
 
 int main()
 {
-	Mat img = imread("eye2.jpg", CV_LOAD_IMAGE_GRAYSCALE);
+	int num_frames = 1;
+	for(int i = 0; i < num_frames; i++)
+	{
+		Mat frame, frame_gray; //2 frame buffers
+	
+		frame = imread("eye2.jpg"); //load the frame image
 
-	namedWindow("W1");
-	threshold(img,img,220,255, THRESH_BINARY);
-	imshow("W1", ~img);
+		resize(frame, frame, Size(), .25, .25);
+		//resize(frame, frame, Size(), 3, 3);
 
 
-	waitKey(0);
+		//Switch to HSV view
+		cvtColor(frame, frame_gray, CV_BGR2HSV);
+		//Smooth the image and 
+		GaussianBlur(frame_gray, frame_gray, Size(9,9), 2, 2);
+		//threshold(frame_gray, frame_gray, 20, 255, 1);
+		inRangeS();
 
-	destroyWindow("W1");
+		namedWindow("W1");
+		imshow("W1", frame);
+		namedWindow("W2");
+		imshow("W2", frame_gray);
 
+
+		waitKey(0);
+
+		destroyWindow("W1");
+		destroyWindow("W2");
+	}
 
 
 	return 0;
