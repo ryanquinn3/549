@@ -9,7 +9,7 @@ using namespace cv;
 int main()
 {
 
-	VideoCapture cap("../andy_eye_calc_case.h264");
+	VideoCapture cap("../andy_dark.h264");
 	if(!cap.isOpened())
 	{
 		cout << "Failed to open video stream" << endl;
@@ -28,8 +28,8 @@ int main()
 	{
 		Mat frame_HSV; //2 frame buffers
 	
-		frame = imread("../image_0001.jpg"); //load the frame image
-
+		//frame = imread("../image_0001.jpg"); //load the frame image
+		frame = imread("eye2.jpg");
 		resize(frame, frame, Size(), .5, .5);
 		//resize(frame, frame, Size(), 3, 3);
 
@@ -43,7 +43,7 @@ int main()
 		cvtColor(frame, frame_HSV, CV_BGR2HSV);
 		Mat brown_mask;
 		//Mask out everything except the blackest parts of the image
-		inRange(frame_HSV, Scalar(0, 0,0), Scalar(255,255,25), brown_mask);
+		inRange(frame_HSV, Scalar(0, 0,0), Scalar(255,255, 25), brown_mask);
 	
 		//Draw the contours for the isolated pupil
 		findContours(brown_mask, contours, hierarchy, CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE, Point(0,0));	
