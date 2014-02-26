@@ -35,19 +35,23 @@ int main()
 
 
 		//Switch to HSV view
-		cvtColor(frame, frame_HSV, CV_BGR2HSV);
+		//cvtColor(frame, frame_HSV, CV_BGR2HSV);
 		//Smooth the image 
-		GaussianBlur(frame_HSV, frame_HSV, Size(9,9), 2, 2);
-		
+		GaussianBlur(frame_HSV, frame_HSV, Size(25,25), 2, 2);
+	        //medianBlur(frame, frame, 1);	
+		//bilateralFilter(frame, 		
+
+		cvtColor(frame, frame_HSV, CV_BGR2HSV);
 		Mat brown_mask;
 		//Mask out everything except the blackest parts of the image
 		inRange(frame_HSV, Scalar(0, 0,0), Scalar(255,255,25), brown_mask);
 	
 		//Draw the contours for the isolated pupil
-		findContours(brown_mask, contours, hierarchy, CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE, Point(0,0));
+		findContours(brown_mask, contours, hierarchy, CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE, Point(0,0));	
 		
 		Mat contour_edges = Mat::zeros(brown_mask.size(), CV_8UC3);
 		vector<double> areas;
+
 		//Find the largest contour, and assume it bounds the pupil
 		for(int j = 0; j < contours.size(); j++)
 		{
