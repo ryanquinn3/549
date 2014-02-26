@@ -28,8 +28,8 @@ int main()
 	{
 		Mat frame_HSV; //2 frame buffers
 	
-		//frame = imread("../image_0001.jpg"); //load the frame image
-		frame = imread("eye2.jpg");
+		frame = imread("../image_0001.jpg"); //load the frame image
+		//frame = imread("eye2.jpg");
 		resize(frame, frame, Size(), .5, .5);
 		//resize(frame, frame, Size(), 3, 3);
 
