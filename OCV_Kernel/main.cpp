@@ -8,6 +8,31 @@ using namespace cv;
 
 int main()
 {
+
+	VideoCapture cap("../test_tommy.h264");
+	if(!cap.isOpened())
+	{
+		cout << "Failed to open video stream" << endl;
+		return 1;
+	}
+
+	double fps = cap.get(CV_CAP_PROP_FPS);
+	cout << "Streaming video at an estimated " << fps << " FPS" << endl;
+
+		namedWindow("test");
+
+	while(1)
+	{
+
+		Mat frame;
+		bool success = cap.read(frame);
+	if(!success)
+	{ cout << "OH NO!" << endl; return 2;}
+		imshow("test", frame);
+
+waitKey(0);
+}
+
 	int num_frames = 1;
 	for(int i = 0; i < num_frames; i++)
 	{
