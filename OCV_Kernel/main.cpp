@@ -8,11 +8,10 @@ using namespace cv;
 
 int main()
 {
-	namedWindow("W1");
 	int num_frames = 1;
 	for(int i = 0; i < num_frames; i++)
 	{
-		Mat frame, frame_gray; //2 frame buffers
+		Mat frame, frame_HSV; //2 frame buffers
 	
 		frame = imread("eye.jpg"); //load the frame image
 
@@ -21,14 +20,13 @@ int main()
 
 
 		//Switch to HSV view
-		cvtColor(frame, frame_gray, CV_BGR2HSV);
+		cvtColor(frame, frame_HSV, CV_BGR2HSV);
 		//Smooth the image 
-		GaussianBlur(frame_gray, frame_gray, Size(9,9), 2, 2);
+		GaussianBlur(frame_HSV, frame_HSV, Size(9,9), 2, 2);
 		
 		Mat brown_mask;
-
 		//Mask out everything except the blackest parts of the image
-		inRange(frame_gray, Scalar(0, 0,0), Scalar(255,255,20), brown_mask);
+		inRange(frame_HSV, Scalar(0, 0,0), Scalar(255,255,20), brown_mask);
 	
 		//Draw the contours for the isolated pupil
 		vector<vector<Point> > contours;
@@ -42,24 +40,16 @@ int main()
 		cout << "Est. pupil area = " << contourArea(contours[j]) << endl;
 		}
 
-
-
-	imshow("W1", brown_mask);
-
-
-
+		namedWindow("W1");
+		imshow("W1", contour_edges);
 		namedWindow("W2");
-		imshow("W2", contour_edges);
-		
-
+		imshow("W2", frame);
 
 		waitKey(0);
 
 		destroyWindow("W1");
-		destroyWindow("W2");
 		
 	}
-
 
 	return 0;
 }
