@@ -9,38 +9,27 @@ using namespace cv;
 int main()
 {
 
-	VideoCapture cap("../test_tommy.h264");
+	VideoCapture cap("../eye_test.h264");
 	if(!cap.isOpened())
 	{
 		cout << "Failed to open video stream" << endl;
 		return 1;
 	}
 
-	double fps = cap.get(CV_CAP_PROP_FPS);
-	cout << "Streaming video at an estimated " << fps << " FPS" << endl;
-
-		namedWindow("test");
-
-	while(1)
-	{
-
-		Mat frame;
-		bool success = cap.read(frame);
-	if(!success)
-	{ cout << "OH NO!" << endl; return 2;}
-cout << "HERE" << endl;
-waitKey(0);
-}
-
-	int num_frames = 1;
-	for(int i = 0; i < num_frames; i++)
-	{
-		Mat frame, frame_HSV; //2 frame buffers
+	cout << "Streaming video at an estimated " << cap.get(CV_CAP_PROP_FPS) << " FPS" << endl;
 	
-		frame = imread("eye.jpg"); //load the frame image
+	Mat frame;
+	vector<vector<Point> > contours;
+	vector<Vec4i> hierarchy;
+
+	while(cap.read(frame))
+	{
+		Mat frame_HSV; //2 frame buffers
+	
+		frame = imread("eye3.jpg"); //load the frame image
 
 		//resize(frame, frame, Size(), .25, .25);
-		resize(frame, frame, Size(), 3, 3);
+		//resize(frame, frame, Size(), 3, 3);
 
 
 		//Switch to HSV view
@@ -53,21 +42,23 @@ waitKey(0);
 		inRange(frame_HSV, Scalar(0, 0,0), Scalar(255,255,20), brown_mask);
 	
 		//Draw the contours for the isolated pupil
-		vector<vector<Point> > contours;
-		vector<Vec4i> hierarchy;
 		findContours(brown_mask, contours, hierarchy, CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE, Point(0,0));
 		
 		Mat contour_edges = Mat::zeros(brown_mask.size(), CV_8UC3);
+		vector<double> areas;
+		//Find the largest contour, and assume it bounds the pupil
 		for(int j = 0; j < contours.size(); j++)
-		{
-			drawContours( contour_edges, contours, j, Scalar(255,0,0), 2,8, hierarchy, 0, Point());
-		cout << "Est. pupil area = " << contourArea(contours[j]) << endl;
-		}
+			areas.push_back(contourArea(contours[j]));
+
+		if(areas.size() != 0)
+			cout << "Est. pupil area = " << *max_element(areas.begin(), areas.end()) << endl;
+		drawContours( contour_edges, contours, -1, Scalar(255,0,0), 1,8, hierarchy, 0, Point());
+		areas.clear();	
+		contours.clear();
+		hierarchy.clear();
 
 		namedWindow("W1");
-		imshow("W1", contour_edges);
-		namedWindow("W2");
-		imshow("W2", frame);
+		imshow("W1", contour_edges|frame);
 
 		waitKey(0);
 
