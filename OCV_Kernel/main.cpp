@@ -28,16 +28,15 @@ int main()
 	{
 		Mat frame_HSV; //2 frame buffers
 	
-		//frame = imread("eye2.jpg"); //load the frame image
+		frame = imread("../image_0001.jpg"); //load the frame image
 
 		resize(frame, frame, Size(), .5, .5);
 		//resize(frame, frame, Size(), 3, 3);
 
 
 		//Switch to HSV view
-		//cvtColor(frame, frame_HSV, CV_BGR2HSV);
 		//Smooth the image 
-		GaussianBlur(frame_HSV, frame_HSV, Size(25,25), 2, 2);
+		//GaussianBlur(frame_HSV, frame_HSV, Size(25,25), 2, 2);
 	        //medianBlur(frame, frame, 1);	
 		//bilateralFilter(frame, 		
 
