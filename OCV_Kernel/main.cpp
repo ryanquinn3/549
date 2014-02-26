@@ -8,15 +8,16 @@ using namespace cv;
 
 int main()
 {
+	namedWindow("W1");
 	int num_frames = 1;
 	for(int i = 0; i < num_frames; i++)
 	{
 		Mat frame, frame_gray; //2 frame buffers
 	
-		frame = imread("eye.jpg"); //load the frame image
+		frame = imread("eye2.jpg"); //load the frame image
 
-		//resize(frame, frame, Size(), .25, .25);
-		resize(frame, frame, Size(), 3, 3);
+		resize(frame, frame, Size(), .25, .25);
+		//resize(frame, frame, Size(), 3, 3);
 
 
 		//Switch to HSV view
@@ -27,30 +28,31 @@ int main()
 		Mat brown_mask;
 
 		//Mask out everything except the blackest parts of the image
-		inRange(frame_gray, Scalar(0, 0,0), Scalar(255,255,25), brown_mask);
-
-
-		vector<Vec3f> circles;
-		HoughCircles(brown_mask, circles, CV_HOUGH_GRADIENT, 1, 1, 200, 100, 0, 0);
-		cout << circles.size() << endl;
-		for(int j = 0; j < circles.size(); j++)
-		{
-			Point center(cvRound(circles[j][0]), cvRound(circles[j][1]));
-			int radius = cvRound(circles[j][2]);
-
-			circle(frame, center, 3, Scalar(0,255,0), -1, 8, 0);
-			circle(frame, center, radius, Scalar(70,255,0), 3, 8, 0);	
-
-		}
- 	
+		inRange(frame_gray, Scalar(0, 0,0), Scalar(255,255,20), brown_mask);
 	
+		//Draw the contours for the isolated pupil
+		Mat canny_edges;
+		Canny(brown_mask, canny_edges, 40, 120, 3);
+
+		vector<vector<Point> > contours;
+		vector<Vec4i> hierarchy;
+		findContours(canny_edges, contours, hierarchy, CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE, Point(0,0));
+		
+		Mat contour_edges = Mat::zeros(canny_edges.size(), CV_8UC3);
+		for(int j = 0; j < contours.size(); j++)
+		{
+			drawContours( contour_edges, contours, j, Scalar(255,0,0), 2,8, hierarchy, 0, Point());
+		cout << "Est. pupil area = " << contourArea(contours[j]) << endl;
+		}
 
 
 
-		namedWindow("W1");
-		imshow("W1", frame);
+	imshow("W1", brown_mask);
+
+
+
 		namedWindow("W2");
-		imshow("W2", brown_mask);
+		imshow("W2", contour_edges);
 		
 
 
