@@ -14,10 +14,10 @@ int main()
 	{
 		Mat frame, frame_gray; //2 frame buffers
 	
-		frame = imread("eye2.jpg"); //load the frame image
+		frame = imread("eye.jpg"); //load the frame image
 
 		//resize(frame, frame, Size(), .25, .25);
-		//resize(frame, frame, Size(), 3, 3);
+		resize(frame, frame, Size(), 3, 3);
 
 
 		//Switch to HSV view
@@ -31,12 +31,9 @@ int main()
 		inRange(frame_gray, Scalar(0, 0,0), Scalar(255,255,20), brown_mask);
 	
 		//Draw the contours for the isolated pupil
-		Mat canny_edges;
-		Canny(brown_mask, canny_edges, 40, 120, 3);
-
 		vector<vector<Point> > contours;
 		vector<Vec4i> hierarchy;
-		findContours(canny_edges, contours, hierarchy, CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE, Point(0,0));
+		findContours(brown_mask, contours, hierarchy, CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE, Point(0,0));
 		
 		Mat contour_edges = Mat::zeros(canny_edges.size(), CV_8UC3);
 		for(int j = 0; j < contours.size(); j++)
