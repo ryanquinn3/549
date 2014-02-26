@@ -9,7 +9,7 @@ using namespace cv;
 int main()
 {
 
-	VideoCapture cap("../andy_dark.h264");
+	VideoCapture cap("../../ryan.h264");
 	if(!cap.isOpened())
 	{
 		cout << "Failed to open video stream" << endl;
@@ -29,7 +29,7 @@ int main()
 		Mat frame_HSV; //2 frame buffers
 	
 		//frame = imread("../image_0001.jpg"); //load the frame image
-		frame = imread("eye2.jpg");
+		//frame = imread("eye2.jpg");
 		resize(frame, frame, Size(), .5, .5);
 		//resize(frame, frame, Size(), 3, 3);
 
