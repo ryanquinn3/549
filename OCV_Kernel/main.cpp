@@ -45,9 +45,9 @@ int main()
 
 		Mat frame_HSV; //2 frame buffers
 	
-		frame = imread("./eye3.jpg"); //load the frame image
+		//frame = imread("./eye3.jpg"); //load the frame image
 
-		//resize(frame, frame, Size(), .25, 0.25);
+		resize(frame, frame, Size(), .25, 0.25);
 		cvtColor(frame, frame_HSV, CV_BGR2HSV);
 
 		vector<Mat> hsv_planes;
