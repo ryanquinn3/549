@@ -2,58 +2,144 @@
 #include "opencv2/imgproc/imgproc.hpp"
 #include <iostream>
 #include <stdio.h>
+#include <fstream>
 
-#define threshold_bins 30
-#define INIT_THROWAWAY_FRAMES 8
+#define threshold_bins 13
+#define INIT_THROWAWAY_FRAMES 25
+#define TEST_LENGTH_SECONDS 20
+#define SLIDING_WINDOW_SIZE 20
+
+#define VISUAL_DEBUG
 
 using namespace std;
 using namespace cv;
 
-int main()
+//Call this program with the filename of the video file to analyze
+int main(int argc, char** argv)
 {
+	if(argc != 2)
+	{
+		cout << "Error: Need to Provide a Video File!" << endl;
+		return 1;
+	}
+	
+	vector<float> sliding_area_average;
+	vector<float> sliding_ratio_average;
+	int sliding_index = 0;
 
-	VideoCapture cap("../andy_dark.h264");
+	VideoCapture cap(argv[1]);
+	int FPS = cap.get(CV_CAP_PROP_FPS);
+
 	if(!cap.isOpened())
 	{
-		cout << "Failed to open video stream" << endl;
+		cout << "Error: Failed to open video stream" << endl;
 		return 1;
 	}
 
-	cout << "Streaming video at an estimated " << cap.get(CV_CAP_PROP_FPS) << " FPS" << endl;
+	cout << "Streaming video at an estimated " << FPS << " FPS" << endl;
 	
-
 	Mat frame;
 	vector<vector<Point> > contours;
 	vector<Vec4i> hierarchy;
 
-	namedWindow("W1");
-	namedWindow("V");
+	#ifdef VISUAL_DEBUG
 	namedWindow("contours");
-	namedWindow("eroded");
+	#endif
 
-	int frame_num = 0;	
-	float prev_ratio, ratio;
-	prev_ratio = 1.0;
+	ofstream frame_output("OCV_pupil_measurements.txt");
+
+	int frame_num = 0;
+	float R0 = 0;
 
 	while(cap.read(frame))
 	{
 		if(frame_num < INIT_THROWAWAY_FRAMES)
-		{ 
+		{
 			frame_num++;
 			continue;
 		}
 
 		Mat frame_HSV; //2 frame buffers
 	
-		//frame = imread("./eye3.jpg"); //load the frame image
+		//This factor of 4x shrinking applies to video images at the 
+		//RasPi resolution only - changing this factor will invalidate
+		//the rest of the smoothing calibration
+		resize(frame, frame, Size(), .25, .25);
 
-		resize(frame, frame, Size(), .25, 0.25);
+
+		///////////FEATURE/EROSION DETECTION: METHOD 1 //////////////////
+		Mat frame_gray;
+		Mat src, erosion_dst;
+		cvtColor(frame, frame_gray, CV_BGR2GRAY);
+
+  		const int erosion_type = MORPH_ELLIPSE;
+		const int erosion_size = 5;
+
+  		Mat element = getStructuringElement( erosion_type,
+                                       Size( 2*erosion_size + 1, 2*erosion_size+1 ),
+                                       Point( erosion_size, erosion_size ) );
+
+  		/// Apply the erosion operation
+  		erode( frame_gray, erosion_dst, element );
+	
+		GaussianBlur(erosion_dst, erosion_dst, Size(5,5), 0, 0);
+		//Don't blur too much, or the dark border of the eyelid will
+		//mix with the pupil
+		medianBlur(erosion_dst, erosion_dst, 11);
+
+		double minVal, maxVal; Point minLoc, maxLoc;
+		minMaxLoc(erosion_dst, &minVal, &maxVal, &minLoc, &maxLoc, Mat() );
+
+		Mat black_mask;
+		//Mask out everything except the blackest parts of the image
+		inRange(erosion_dst, Scalar(minVal), Scalar(minVal*1.25), black_mask);
+
+		vector<vector<Point> > contours;
+		vector<Vec4i> hierarchy;
+
+		//Draw the contours for the isolated pupil
+		findContours(black_mask, contours, hierarchy, CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE, Point(0,0));
+		
+		Mat contour_edges = Mat::zeros(black_mask.size(), CV_8UC3);
+		vector<double> areas;
+		//Find the largest contour, and assume it bounds the pupil
+		for(int j = 0; j < contours.size(); j++)
+		{
+			areas.push_back(contourArea(contours[j]));
+			drawContours( contour_edges, contours, j, Scalar(255,0,0), 1,8, hierarchy, 0, Point());
+		}
+
+		double max_area = 0; 
+		int max_loc = distance(areas.begin(), max_element(areas.begin(), areas.end()));
+		if(areas.size() != 0)
+			max_area = *max_element(areas.begin(), areas.end());
+		//////////////////////////////////////////////////////////////////
+
+
+		/////////////////HISTOGRAM DETECTION - METHOD 2////////////////////
 		cvtColor(frame, frame_HSV, CV_BGR2HSV);
 
+		//1) Look only @ the V part of the image
+		//2) Look only @ the ROI surrounding the contours found above
 		vector<Mat> hsv_planes;
 		split(frame_HSV, hsv_planes);
-		int histSize = 256;
 
+		//Find the circle that encompasses the contour above;
+		//this is probably (most of) the pupil
+		Point2f ROI_center; float ROI_radius;
+		minEnclosingCircle( contours[max_loc], ROI_center, ROI_radius);
+
+		//Expand the circle to get a wider ROI, 
+		//BUT keep a constant size after the first iteration
+		if(frame_num - INIT_THROWAWAY_FRAMES == 0)
+			R0 = ROI_radius;
+
+		Mat circle_masking_frame =  255*Mat::ones(frame.size(), CV_8UC1);
+		circle(circle_masking_frame, ROI_center, R0, Scalar(0), -1,8,8);
+		//Isolate part of the V channel to make our final ROI
+		hsv_planes[2] |= circle_masking_frame; 
+
+		int histSize = 256;
 		float range[] = {0, 256};
 		const float* histRange = {range};
 
@@ -69,82 +155,59 @@ int main()
   		normalize(v_hist, v_hist, 0, histImage.rows, NORM_MINMAX, -1, Mat() );
 
 		float black_sum = 0.0;
-  	for(int i = 0; i < threshold_bins; i++)
-		black_sum += v_hist.at<float>(i,0);
+  		for(int i = (int)minVal; i < (int)minVal+threshold_bins; i++)
+			black_sum += v_hist.at<float>(i,0);
 
 		Scalar total_sum = sum(v_hist);
-		ratio = black_sum/(float)(total_sum[0]);
-		cout << "Frame " << frame_num << ": Low-value ratio over " << threshold_bins << " bins = " << ratio << "; \% change = " << (ratio-prev_ratio)/prev_ratio * 100 <<  endl;
-	
-	prev_ratio = ratio;
-	
+		float ratio = black_sum/(float)(total_sum[0]);
+		///////////////////////////////////////////////////////////////
 
-  	/// Draw histogram
-  	for( int i = 1; i < histSize; i++ )
-  	{
-  	    line( histImage, Point( bin_w*(i-1), hist_h - cvRound(v_hist.at<float>(i-1)) ) ,
-   	                    Point( bin_w*(i), hist_h - cvRound(v_hist.at<float>(i)) ),
-   	                    Scalar( 255, 0, 0), 2, 8, 0  );
-  	}
-
-
-	//Trial of erosion technique /////////////////////////////////////
-	Mat src_gray;
-	cvtColor(frame, src_gray, CV_BGR2GRAY);
-
-  	int erosion_type = MORPH_ELLIPSE;
-	Mat src, erosion_dst;
-
-	int erosion_size = 10;
-
-  	Mat element = getStructuringElement( erosion_type,
-                                       Size( 2*erosion_size + 1, 2*erosion_size+1 ),
-                                       Point( erosion_size, erosion_size ) );
-
-  	/// Apply the erosion operation
-  	erode( src_gray, erosion_dst, element );
-	
-	//GaussianBlur(erosion_dst, erosion_dst, Size(5,5), 0, 0);
-	medianBlur(erosion_dst, erosion_dst, 35);	
-
-
-	double minVal, maxVal; Point minLoc, maxLoc;
-	minMaxLoc(erosion_dst, &minVal, &maxVal, &minLoc, &maxLoc, Mat() );
-	cout << "Pixel values (hsV): min = " << (minVal/255)*100 << "\%; max = " << (maxVal/255)*100 << "\%" << endl;
-
-	Mat black_mask;
-	//Mask out everything except the blackest parts of the image
-	inRange(erosion_dst, Scalar(minVal), Scalar(minVal*1.67), black_mask);
-
-	vector<vector<Point> > contours;
-	vector<Vec4i> hierarchy;
-
-		//Draw the contours for the isolated pupil
-		findContours(black_mask, contours, hierarchy, CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE, Point(0,0));
-		
-		Mat contour_edges = Mat::zeros(black_mask.size(), CV_8UC3);
-		vector<double> areas;
-		//Find the largest contour, and assume it bounds the pupil
-		for(int j = 0; j < contours.size(); j++)
+		//Calculate a sliding window average to smooth out noise-per-frame
+		if(sliding_area_average.size() < SLIDING_WINDOW_SIZE)
 		{
-			areas.push_back(contourArea(contours[j]));
-			drawContours( contour_edges, contours, j, Scalar(255,0,0), 1,8, hierarchy, 0, Point());
+			sliding_area_average.push_back(max_area);
+			sliding_ratio_average.push_back(ratio);
 		}
+		else
+		{
+			float area_avg = 0; float ratio_avg = 0;
 
-	imshow("eroded", erosion_dst);
-	///////////////////////////////////////////////////////////////////
+			sliding_area_average[sliding_index] = max_area;
+			sliding_ratio_average[sliding_index] = ratio;
+			for(int q = 0; q < SLIDING_WINDOW_SIZE; q++)
+			{
+				area_avg += sliding_area_average[q];
+				ratio_avg += sliding_ratio_average[q];
+			}
 
+			sliding_index++;
+			if(sliding_index == SLIDING_WINDOW_SIZE) sliding_index = 0;
 
-		imshow("W1", histImage);
+			area_avg /= SLIDING_WINDOW_SIZE;
+			ratio_avg /= SLIDING_WINDOW_SIZE;
+
+			#ifdef VISUAL_DEBUG
+			cout << "Frame " << frame_num << ": Sliding Area Average = " << area_avg << endl;
+			cout << "Sliding Ratio Average = " << ratio_avg << endl << endl;
+			#endif
+
+			//Write output in form FRAME;AREA;RATIO\n	
+			frame_output << frame_num-INIT_THROWAWAY_FRAMES << ";" 
+				<< area_avg << ";" << ratio_avg << endl;
+		}
+			
+		#ifdef VISUAL_DEBUG
 		imshow("contours", frame|contour_edges);
-		imshow("V", hsv_planes[2]);
-		imwrite("V_out.jpg", erosion_dst);
 		waitKey(0);
-		frame_num++;
+		#endif
 
-		
+		frame_num++;
+		if(frame_num >= (TEST_LENGTH_SECONDS*FPS)) break;
 	}
-	destroyWindow("W1");
-	destroyWindow("W2");
+
+	#ifdef VISUAL_DEBUG
+	destroyWindow("contours");
+	#endif
+	frame_output.close();	
 	return 0;
 }
