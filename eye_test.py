@@ -4,8 +4,9 @@ from pygame.locals import *
 def run():
     # Initialise screen
     pygame.init()
-    screen = pygame.display.set_mode((700,700))
+    screen = pygame.display.set_mode((700,700),pygame.FULLSCREEN)
     pygame.display.set_caption('Basic Pygame program')
+
 
     # Fill background
     background = pygame.Surface(screen.get_size())
@@ -26,10 +27,14 @@ def run():
 
     
     pygame.display.flip()
-    pygame.time.wait(5000)
+    pygame.time.wait(3500)
     background.fill((255,255,255))
     screen.blit(background,(0,0))
     pygame.display.update()
-    pygame.time.wait(9000)
+    pygame.time.wait(3500)
+
+
+
+run()
 
 
