@@ -1,3 +1,5 @@
+#include "opencv2/opencv.hpp"
+#include "opencv2/opencv_modules.hpp"
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
 #include <iostream>
@@ -6,10 +8,10 @@
 
 #define threshold_bins 13
 #define INIT_THROWAWAY_FRAMES 25
-#define TEST_LENGTH_SECONDS 20
+#define TEST_LENGTH_SECONDS 10
 #define SLIDING_WINDOW_SIZE 20
 
-#define VISUAL_DEBUG
+//#define VISUAL_DEBUG
 
 using namespace std;
 using namespace cv;
@@ -28,7 +30,7 @@ int main(int argc, char** argv)
 	int sliding_index = 0;
 
 	VideoCapture cap(argv[1]);
-	int FPS = cap.get(CV_CAP_PROP_FPS);
+	int FPS = cap.get(CAP_PROP_FPS);
 
 	if(!cap.isOpened())
 	{
@@ -53,10 +55,14 @@ int main(int argc, char** argv)
 
 	while(cap.read(frame))
 	{
+		
+
+		frame_num++;
+		cout << frame_num << endl;	
 		if(frame_num < INIT_THROWAWAY_FRAMES)
 		{
-			frame_num++;
-			continue;
+			//	frame_num++;
+			//continue;
 		}
 
 		Mat frame_HSV; //2 frame buffers
@@ -70,7 +76,7 @@ int main(int argc, char** argv)
 		///////////FEATURE/EROSION DETECTION: METHOD 1 //////////////////
 		Mat frame_gray;
 		Mat src, erosion_dst;
-		cvtColor(frame, frame_gray, CV_BGR2GRAY);
+		cvtColor(frame, frame_gray, COLOR_BGR2GRAY);
 
   		const int erosion_type = MORPH_ELLIPSE;
 		const int erosion_size = 5;
@@ -98,7 +104,7 @@ int main(int argc, char** argv)
 		vector<Vec4i> hierarchy;
 
 		//Draw the contours for the isolated pupil
-		findContours(black_mask, contours, hierarchy, CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE, Point(0,0));
+		findContours(black_mask, contours, hierarchy, RETR_TREE, CHAIN_APPROX_SIMPLE, Point(0,0));
 		
 		Mat contour_edges = Mat::zeros(black_mask.size(), CV_8UC3);
 		vector<double> areas;
@@ -113,11 +119,12 @@ int main(int argc, char** argv)
 		int max_loc = distance(areas.begin(), max_element(areas.begin(), areas.end()));
 		if(areas.size() != 0)
 			max_area = *max_element(areas.begin(), areas.end());
+		continue;
 		//////////////////////////////////////////////////////////////////
 
 
 		/////////////////HISTOGRAM DETECTION - METHOD 2////////////////////
-		cvtColor(frame, frame_HSV, CV_BGR2HSV);
+		cvtColor(frame, frame_HSV, COLOR_BGR2HSV);
 
 		//1) Look only @ the V part of the image
 		//2) Look only @ the ROI surrounding the contours found above
@@ -127,7 +134,7 @@ int main(int argc, char** argv)
 		//Find the circle that encompasses the contour above;
 		//this is probably (most of) the pupil
 		Point2f ROI_center; float ROI_radius;
-		minEnclosingCircle( contours[max_loc], ROI_center, ROI_radius);
+		minEnclosingCircle( contours[0], ROI_center, ROI_radius);
 
 		//Expand the circle to get a wider ROI, 
 		//BUT keep a constant size after the first iteration
@@ -165,25 +172,25 @@ int main(int argc, char** argv)
 		//Calculate a sliding window average to smooth out noise-per-frame
 		if(sliding_area_average.size() < SLIDING_WINDOW_SIZE)
 		{
-			sliding_area_average.push_back(max_area);
+			//sliding_area_average.push_back(max_area);
 			sliding_ratio_average.push_back(ratio);
 		}
 		else
 		{
 			float area_avg = 0; float ratio_avg = 0;
 
-			sliding_area_average[sliding_index] = max_area;
+			//sliding_area_average[sliding_index] = max_area;
 			sliding_ratio_average[sliding_index] = ratio;
 			for(int q = 0; q < SLIDING_WINDOW_SIZE; q++)
 			{
-				area_avg += sliding_area_average[q];
+				//area_avg += sliding_area_average[q];
 				ratio_avg += sliding_ratio_average[q];
 			}
 
 			sliding_index++;
 			if(sliding_index == SLIDING_WINDOW_SIZE) sliding_index = 0;
 
-			area_avg /= SLIDING_WINDOW_SIZE;
+			//area_avg /= SLIDING_WINDOW_SIZE;
 			ratio_avg /= SLIDING_WINDOW_SIZE;
 
 			#ifdef VISUAL_DEBUG
@@ -192,8 +199,8 @@ int main(int argc, char** argv)
 			#endif
 
 			//Write output in form FRAME;AREA;RATIO\n	
-			frame_output << frame_num-INIT_THROWAWAY_FRAMES << ";" 
-				<< area_avg << ";" << ratio_avg << endl;
+			//frame_output << frame_num-INIT_THROWAWAY_FRAMES << ";" 
+				//<< area_avg << ";" << ratio_avg << endl;
 		}
 			
 		#ifdef VISUAL_DEBUG
