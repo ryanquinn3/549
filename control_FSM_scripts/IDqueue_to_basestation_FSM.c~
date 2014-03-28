@@ -27,25 +27,25 @@ int main()
 	if(pthread_create(&fsm1_thread, NULL, FSM1, NULL) != 0) cout << "Bad thread1 result" << endl;
 	if(pthread_create(&fsm2_thread, NULL, FSM2, NULL) != 0) cout << "Bad thread2 result" << endl;
 
-	while(1);
+	while(1);	
+
+
+
 	return 0;
 }
 
 void* FSM1(void* arg)
 {
-	ifstream queue;
-	
-
-
+	cout << "TEST FROM THREAD 1" << endl;
 	return NULL;
 
 
 }
 
-//This FSM reads from the ID queue and communicates with the basestation for scp
 void* FSM2(void* arg)
 {
 	ifstream queue;
+	char cur_buffer = 'A';	
 	string user, ID, testNum;
 
 	vector<user_description> queue_contents; 
@@ -62,9 +62,9 @@ void* FSM2(void* arg)
 		//Nope, nothing written
 		if(!queue.is_open())
 		{
-			queue.close();
 			pthread_mutex_unlock(&queue_sync);
 			cout << "nothing written this cycle" << endl;
+			queue.close();
 			system("sleep 2");
 			continue;
 		}
@@ -89,7 +89,6 @@ void* FSM2(void* arg)
 	
 			//Wait until the video corresponding to this user exists
 			string video_filename = "Test"+testNum+"_"+user+".h264";
-			cout << "Waiting on video file " << video_filename << endl;
 			ifstream video(video_filename.c_str());
 			while(!video.is_open())
 				video.open(video_filename.c_str());
