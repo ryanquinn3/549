@@ -17,6 +17,8 @@ struct user_description {
 void* FSM1(void*);
 void* FSM2(void*);
 
+string test_request_file = "PIUI_REQUEST_FILE";
+
 pthread_mutex_t queue_sync;
 
 int main()
@@ -27,25 +29,69 @@ int main()
 	if(pthread_create(&fsm1_thread, NULL, FSM1, NULL) != 0) cout << "Bad thread1 result" << endl;
 	if(pthread_create(&fsm2_thread, NULL, FSM2, NULL) != 0) cout << "Bad thread2 result" << endl;
 
-	while(1);	
-
-
-
+	while(1);
 	return 0;
 }
 
+//This FSM waits for permission from the PiUi interface to add to the ID queue and take a video
 void* FSM1(void* arg)
 {
-	cout << "TEST FROM THREAD 1" << endl;
+	ofstream queue;
+	ifstream test_read;
+
+	//Loop forever, checking if we have permission to do a test on each iteration
+	while(1)
+	{
+		//Only do something when the user has requested a test
+		test_read.open(test_request_file.c_str());
+		while(!test_read.is_open())
+		{	system("sleep 1"); test_read.open(test_request_file.c_str());	}	
+	
+
+		cout << "T2: received PiUi request" << endl;
+	
+		//Parse the PiUi test information
+		string user, ID, testNum;
+		getline(test_read, user);
+		getline(test_read, ID);
+		getline(test_read, testNum);		
+
+		//Make sure FSM2 doesn't read while we write
+		pthread_mutex_lock(&queue_sync);
+						
+		//Open up the queue and append the new information from PiUi
+		queue.open("ID_queue.dat", ofstream::out | ofstream::app);
+		queue << user << endl << ID << endl << testNum << endl;
+		queue.close();
+
+		test_read.close(); remove(test_request_file.c_str());
+		pthread_mutex_unlock(&queue_sync);
+
+		cout << "T2: test information for user " << user << " written to ID queue" << endl;
+
+		//Now that the queue is updated, we want to take the video for the test
+
+		//First, create the new filename for the video
+		string video_command = string("touch ") + "Test" + testNum + "_" + user + ".h264";
+		//DUMMY VIDEO
+		system("sleep 20");
+		system(video_command.c_str());
+
+
+		cout << "T2: Video test complete for user " << user << endl;	
+	}
+	
+
+
 	return NULL;
 
 
 }
 
+//This FSM reads from the ID queue and communicates with the basestation for scp
 void* FSM2(void* arg)
 {
 	ifstream queue;
-	char cur_buffer = 'A';	
 	string user, ID, testNum;
 
 	vector<user_description> queue_contents; 
@@ -62,9 +108,9 @@ void* FSM2(void* arg)
 		//Nope, nothing written
 		if(!queue.is_open())
 		{
-			pthread_mutex_unlock(&queue_sync);
-			cout << "nothing written this cycle" << endl;
 			queue.close();
+			pthread_mutex_unlock(&queue_sync);
+			cout << "T1: nothing found this cycle in queue" << endl;
 			system("sleep 2");
 			continue;
 		}
@@ -79,6 +125,8 @@ void* FSM2(void* arg)
 			user_description temp_desc;
 			temp_desc.user = user; temp_desc.ID = ID; temp_desc.testNum = testNum;
 			queue_contents.push_back(temp_desc);
+
+			cout << "T1: found test request for user " << user << " in queue" << endl;
 		}
 
 		//Open the queue back up for writing from the other FSM		
@@ -88,11 +136,14 @@ void* FSM2(void* arg)
 		{
 	
 			//Wait until the video corresponding to this user exists
-			string video_filename = "Test"+testNum+"_"+user+".h264";
+			string video_filename = "Test" + queue_contents[i].testNum + "_" + queue_contents[i].user +".h264";
+			cout << "T1: Waiting on video file " << video_filename << endl;
 			ifstream video(video_filename.c_str());
 			while(!video.is_open())
-				video.open(video_filename.c_str());
+			{	system("sleep 1"); video.open(video_filename.c_str());	}
 			video.close();
+
+			cout << "T1: Video file " << video_filename << " found" << endl; 
 
 			
 		}

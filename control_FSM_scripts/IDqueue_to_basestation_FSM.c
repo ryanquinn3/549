@@ -17,6 +17,8 @@ struct user_description {
 void* FSM1(void*);
 void* FSM2(void*);
 
+string test_request_file = "PIUI_REQUEST_FILE";
+
 pthread_mutex_t queue_sync;
 
 int main()
@@ -31,9 +33,53 @@ int main()
 	return 0;
 }
 
+//This FSM waits for permission from the PiUi interface to add to the ID queue and take a video
 void* FSM1(void* arg)
 {
-	ifstream queue;
+	ofstream queue;
+	ifstream test_read;
+
+	//Loop forever, checking if we have permission to do a test on each iteration
+	while(1)
+	{
+		//Only do something when the user has requested a test
+		test_read.open(test_request_file.c_str());
+		while(!test_read.is_open())
+		{	system("sleep 1"); test_read.open(test_request_file.c_str());	}	
+	
+
+		cout << "T2: received PiUi request" << endl;
+	
+		//Parse the PiUi test information
+		string user, ID, testNum;
+		getline(test_read, user);
+		getline(test_read, ID);
+		getline(test_read, testNum);		
+
+		//Make sure FSM2 doesn't read while we write
+		pthread_mutex_lock(&queue_sync);
+						
+		//Open up the queue and append the new information from PiUi
+		queue.open("ID_queue.dat", ofstream::out | ofstream::app);
+		queue << user << endl << ID << endl << testNum << endl;
+		queue.close();
+
+		test_read.close(); remove(test_request_file.c_str());
+		pthread_mutex_unlock(&queue_sync);
+
+		cout << "T2: test information for user " << user << " written to ID queue" << endl;
+
+		//Now that the queue is updated, we want to take the video for the test
+
+		//First, create the new filename for the video
+		string video_command = string("touch ") + "Test" + testNum + "_" + user + ".h264";
+		//DUMMY VIDEO
+		system("sleep 2");
+		system(video_command.c_str());
+
+
+		cout << "T2: Video test complete for user " << user << endl;	
+	}
 	
 
 
@@ -64,7 +110,7 @@ void* FSM2(void* arg)
 		{
 			queue.close();
 			pthread_mutex_unlock(&queue_sync);
-			cout << "nothing written this cycle" << endl;
+			cout << "T1: nothing found this cycle in queue" << endl;
 			system("sleep 2");
 			continue;
 		}
@@ -79,6 +125,8 @@ void* FSM2(void* arg)
 			user_description temp_desc;
 			temp_desc.user = user; temp_desc.ID = ID; temp_desc.testNum = testNum;
 			queue_contents.push_back(temp_desc);
+
+			cout << "T1: found test request for user " << user << " in queue" << endl;
 		}
 
 		//Open the queue back up for writing from the other FSM		
@@ -88,15 +136,34 @@ void* FSM2(void* arg)
 		{
 	
 			//Wait until the video corresponding to this user exists
-			string video_filename = "Test"+testNum+"_"+user+".h264";
-			cout << "Waiting on video file " << video_filename << endl;
+			string video_filename = "Test" + queue_contents[i].testNum + "_" + queue_contents[i].user +".h264";
+			cout << "T1: Waiting on video file " << video_filename << endl;
 			ifstream video(video_filename.c_str());
 			while(!video.is_open())
-				video.open(video_filename.c_str());
+			{	system("sleep 1"); video.open(video_filename.c_str());	}
 			video.close();
 
-			
+		
+			//Create the metafile for this video
+			ofstream metastream("metafile.txt");
+			metastream << queue_contents[i].user << endl;
+			metastream << queue_contents[i].ID << endl;
+			metastream << queue_contents[i].testNum << endl;
+			metastream.close();
+
+			cout << "T1: Video file " << video_filename << " found " << endl;
+			string scp_command = "scp -c blowfish -i /home/pi/.ssh/id_rsa " + video_filename + " metafile.txt apfeifer@192.168.1.4:/home/apfeifer/549/";
+			system(scp_command.c_str());
+
+
+			//HERE, WE NEED TO:
+			//1) WAIT FOR THE LAPTOP TO FINISH
+			//2) RECEIVE THE RESULTS FILE FROM THE LAPTOP
+			//3) CONTINUE WITH EITHER THE NEXT ELEMENT IN THE QUEUE, OR START THE EXECUTIVE LOOP OVER AGAIN	
 		}
+
+		//Empty the local queue cache
+		queue_contents.clear();
 	}
 
 	return NULL;
