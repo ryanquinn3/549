@@ -4,7 +4,7 @@ from pygame.locals import *
 def run():
     # Initialise screen
     pygame.init()
-    screen = pygame.display.set_mode((700,700),pygame.FULLSCREEN)
+    screen = pygame.display.set_mode((640,420))
     pygame.display.set_caption('Basic Pygame program')
 
 
@@ -15,7 +15,7 @@ def run():
 
     # Display some text
     font = pygame.font.Font(None, 36)
-    text = font.render("Focus here", 1, (255, 255, 255))
+    text = font.render("Focus here", 1, (180, 0, 0))
     textpos = text.get_rect()
     textpos.centerx = background.get_rect().centerx
     textpos.centery = background.get_rect().centery
@@ -34,7 +34,5 @@ def run():
     pygame.time.wait(3500)
 
 
-
-run()
 
 
