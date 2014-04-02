@@ -1,0 +1,77 @@
+
+<!DOCTYPE html>
+<html lang="en" ng-app="myApp">
+
+<head>
+	<meta charset="utf-8">
+	<title> 20 Questions </title>
+	<link href="css/bootstrap.min.css" rel="stylesheet">
+	<link href="css/app.css" rel="stylesheet">
+
+	<script src="js/bootstrap.js"></script>
+</head>
+
+	<div class="navbar navbar-default navbar-fixed-top">
+		<div class="container">
+			<div class="navbar-header">
+				<a class="navbar-brand" href="#"><b>Concussion App</b></a>
+			</div>
+		</div>
+	</div>
+
+
+	<div id="layout">
+		<div class="col-sm-3 app-window" id="left-side">
+			<div class="well app-window" id="user-list">
+				<ul id="user-list">
+					<li>user1</li>
+					<li>user2</li>
+					<li>user3</li>
+					<li>user4</li>
+				</ul>
+			</div>		
+		</div>
+
+		<div class="col-sm-9 app-window" id="graph-display">
+			<div class="row graph-half">
+				<div class="col-sm-6 " id="graph-num-1">
+				<div class="panel panel-primary" id="graph-1">
+						  <img class="thumbnail panel-primary resize-img"  src="line_example1.jpg" alt="...">
+				</div>
+				</div>
+				<div class="col-sm-6" id="graph-num-2">
+				<div class="panel panel-primary" id="graph-2">
+						  <img class="thumbnail panel-primary resize-img" src="line_example2.jpg" alt="...">
+				</div>
+				</div>
+			</div>
+			
+			<div class="row graph-half">
+				<div class="col-sm-6" id="graph-num-3">
+				<div class="panel panel-primary" id="graph-1">
+						  <img class="thumbnail panel-primary resize-img" src="line_example4.jpg" alt="...">
+				</div>
+				</div>
+
+				<div class="col-sm-6" id="graph-num-4">
+				<div class="panel panel-primary" id="graph-2">
+						  <img class="thumbnail panel-primary resize-img" src="line_example5.jpg" alt="...">
+				</div>
+				</div>
+			</div>
+
+
+		</div>
+	</div>
+
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.0/jquery.min.js"></script>
+
+<script src="lib/angular/angular-route.js"></script>
+<script src="js/app.js"></script>
+<script src="js/socket.io.min.js"></script>
+<script src="js/socket-io.js"></script>
+<script src="js/controllers.js"></script>
+<script src="js/directives.js"></script>
+<script src="js/services.js"></script>
+<script src="js/filters.js"></script>
+</html>

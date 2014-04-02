@@ -1,0 +1,184 @@
+
+<!DOCTYPE html>
+<html lang="en" ng-app="myApp">
+
+<head>
+	<meta charset="utf-8">
+	<title> 20 Questions </title>
+	<link href="css/bootstrap.min.css" rel="stylesheet">
+	<link href="css/app.css" rel="stylesheet">
+	<script src="lib/angular/angular.js"></script>
+</head>
+
+<body ng-controller="AppCtrl">
+
+	<div class="navbar navbar-default navbar-fixed-top">
+		<div class="container">
+			<div class="navbar-header">
+				<a class="navbar-brand" href="#"><b>20 Questions</b></a>
+			</div>
+
+			<div class="collapse navbar-collapse">
+				<ul class="nav navbar-nav">
+					<!--<li><a href="#">About</a></li>-->
+					<!--<li><a href="#">Contact</a></li>-->
+				</ul>
+
+				<form class="navbar-form navbar-right" ng-submit="changeName()">
+					<input id="name-input" class="form-control input-sm" type="text" placeholder="Name" ng-model="newName"/>
+					<button id="name-button" type="submit" class="btn btn-sm btn-default" ng-disabled="notInit" autocomplete="off">Set Name</button>
+					<button id="host-button" type="button" class="btn btn-sm btn-default" ng-disabled="cantBecomeHost" ng-click="claimHost()">Become Host</button>
+					<button id="unhost-button" type="button" class="btn btn-sm btn-default" ng-disabled="isNotHost" ng-click="freeHost()">Stop Hosting</button>
+				</form>
+			</div>
+		</div>
+	</div>
+
+	<div id="layout">
+		<div class="col-sm-9" id="game-window">
+			<div class="row" id="top-row">
+				<div class="col-sm-9" id="game-info-col">
+				<div class="panel panel-primary" id="game-info-panel">
+					<ul id="game-info-list">
+						<li><b>Host:</b> <span ng-bind="host | hostStatus"/></li>
+						<li><b>Game status:</b> <span ng-bind="gameStarted | gameStatus"/></li>
+						<li><b>Secret Topic:</b> <span ng-bind="secretHint | hintStatus"/></li>
+						<li ng-hide="isNotHost"><b>Hidden Answer:</b> <span ng-bind="secretObject" /></li>
+						<li><b>Questions Remaining:</b> <span ng-bind="questionsLeft"/></li>
+					</ul>
+
+					<div id="host-controls">
+					<form class="form-group">
+						<input type="text" ng-model="newSecretHint" ng-hide="isNotHost" ng-disabled="cantSetSecret" placeholder="Category / Hint">
+						<button class="btn btn-default" type='button' ng-hide="isNotHost" ng-disabled="cantSetSecret" ng-click="startGame()">Start Game</button>
+					</form>
+					<form class="form-group"> 
+						<input type="text" ng-model="newSecretObject" ng-hide="isNotHost" ng-disabled="cantSetSecret" placeholder="Hidden Answer">
+						<button class="btn btn-default" type='button' ng-hide="isNotHost" ng-disabled="!gameStarted" ng-click="endGame()">End Game</button>
+					</form>
+					</div>
+				</div>
+				</div>
+
+				<div class="col-sm-3" id="user-col">
+				<div class="panel panel-primary" id="user-panel">
+					<ul id="user-list">
+						<li><b>Users:</b></li>
+						<li ng-repeat="user in users" ng-bind="user"></li>
+					</ul>
+				</div>
+				</div>
+			</div>
+
+			<div class="panel panel-primary questions-panel">
+				<table class="table" id="answered-questions-table">
+					<colgroup>
+						<col style="width: 15%;">
+						<col style="width: 40%;">
+						<col style="width: 45%;">
+					</colgroup>
+
+					<thead>
+						<tr>
+							<th>Asker</th>
+							<th>Question</th>
+							<th>Answer</th>
+						</tr>
+					</thead>
+
+					<tbody>
+						<tr ng-repeat="qst in questionList | isAnswered:true">
+							<td ng-bind="qst.user"></td>
+							<td ng-bind="qst.question"></td>
+							<td> 
+								<span class="glyphicon glyphicon-ok" style="color:#18BC9C" ng-show="qst.answer"> {{qst.answer | yesOrNo}} </span>
+								<span class="glyphicon glyphicon-remove" style="color:#E74C3C" ng-show="!qst.answer"> {{qst.answer | yesOrNo}} </span>
+								<div class="modifyAnswerBtnGroup">
+								<button class="btn btn-success " type="button" ng-hide="isNotHost" ng-disabled="qst.answer" ng-click="answerQuestion(qst.id, qst.question, true)"><span class="glyphicon glyphicon-ok" ></span></button>
+								<button class="btn btn-danger " type="button" ng-hide="isNotHost" ng-disabled="!qst.answer" ng-click="answerQuestion(qst.id, qst.question, false)"><span class="glyphicon glyphicon-remove" ng-disabled="isNotHost"></span></button>
+								<button class="btn btn-info " type="button" ng-hide="isNotHost" ng-click="deleteQuestion(qst.id, qst.question)"><span class="glyphicon glyphicon-trash" ng-disabled="isNotHost"></span></button>
+								</div>
+							</td>
+						</tr>
+					</tbody>
+				</table>
+			</div>
+
+			<div class="panel panel-primary questions-panel">
+				<table class="table" id="unanswered-questions-table">
+					<colgroup>
+						<col style="width: 15%;">
+						<col style="width: 40%;">
+						<col style="width: 45%;">
+					</colgroup>
+
+					<thead>
+						<tr>
+							<th>Asker</th>
+							<th>Question</th>
+							<th>Host Actions</th>
+						</tr>
+					</thead>
+
+					<tbody>
+						<tr ng-repeat="qst in questionList | isAnswered:false">
+							<td ng-bind="qst.user"></td>
+							<td ng-bind="qst.question"></td>
+							<td>
+								<button class="btn btn-success" type="button" ng-disabled="isNotHost" ng-click="answerQuestion(qst.id, qst.question, true)"><span class="glyphicon glyphicon-ok" ></span> YES</button>
+								<button class="btn btn-danger" type="button" ng-disabled="isNotHost" ng-click="answerQuestion(qst.id, qst.question, false)"><span class="glyphicon glyphicon-remove" ng-disabled="isNotHost"></span> NO</button>
+								<button class="btn btn-info" type="button" ng-disabled="isNotHost" ng-click="deleteQuestion(qst.id, qst.question)"><span class="glyphicon glyphicon-trash" ng-disabled="isNotHost"></span> IGNORE</button>
+							</td>
+						</tr>
+					</tbody>
+				</table>
+			</div>
+
+			<div id="host-panel">
+			<form class="form-group" ng-submit="sendQuestion()">
+				<div class="input-group">
+					<span class="input-group-addon"><b>{{questionsLeft}}</b> Questions Remaining: </span>
+					<input type="text" class="form-control" ng-model="newQuestion" ng-disabled="cantAskQuestions" autocomplete="off">
+					<span class="input-group-btn">
+						<button class="btn btn-primary" type="submit" ng-disabled="cantAskQuestions">Ask</button>
+					</span>
+				</div>
+			</form>
+			</div>
+
+		</div>
+
+		<div class="col-sm-3" id="chat-window">
+			<div class="well" id="chat-panel">
+				<ul id="chat-line-list">
+					<li ng-repeat="message in messages track by $index">
+						<b ng-bind="message.user"></b>: <span ng-bind="message.text"/>
+					</li>
+				</ul>
+			</div>
+
+			<div class="form-inline" id="chat-control">
+				<form class="form-group" ng-submit="sendMessage()" ng-disable="cantChat">
+					<div class="input-group">
+					<input type="text" class="form-control" id="chat-text-input" placeholder="Message" ng-model="message" autocomplete="off">
+					<span class="input-group-btn">
+						<button type="submit" class="btn btn-primary" id="chat-button" ng-disabled="notInit">Chat</button>
+					</span>
+					</div>
+				</form>
+			</div>			
+		</div>
+	</div>
+</body>
+
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.0/jquery.min.js"></script>
+
+<script src="lib/angular/angular-route.js"></script>
+<script src="js/app.js"></script>
+<script src="js/socket.io.min.js"></script>
+<script src="js/socket-io.js"></script>
+<script src="js/controllers.js"></script>
+<script src="js/directives.js"></script>
+<script src="js/services.js"></script>
+<script src="js/filters.js"></script>
+</html>
