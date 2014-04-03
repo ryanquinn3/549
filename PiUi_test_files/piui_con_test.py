@@ -32,7 +32,7 @@ class ETGPiUI(object):
         self.img = None
         self.current_test = 1
         self.baseline = None
-        self.ui = PiUi(img_dir=os.path.join(current_dir, 'imgs'))
+        self.ui = PiUi()
     
 
     def main(self):
