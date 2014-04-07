@@ -83,6 +83,7 @@ void* FSM1(void* arg)
 		done_stream << "DONE WITH TEST" << endl;
 		done_stream.close();
 	
+		T1_video_done = 1;
 		cout << "T2: Video test complete for user " << user << endl;	
 	}
 
@@ -144,11 +145,8 @@ void* FSM2(void* arg)
 			ifstream done(done_filename.c_str());
 			while(!done.is_open())
 			{	system("sleep 1"); done.open(done_filename.c_str());	}
-			
-			string remove_done_file = "sudo rm " + done_filename;
-			done.close(); system(remove_done_file.c_str());
-	
-			cout << "T1: removing done file " << done_filename << endl;
+			done.close(); system("sudo rm " + done_filename);
+
 
 			
 
@@ -169,13 +167,12 @@ void* FSM2(void* arg)
 
 			//Synchronize with the basestation - get the final results	
 			video.open(basestation_results_file.c_str());
-			cout << "T1: Waiting on basestation results file" << endl;
+			cout << "Waiting on basestation results file" << endl;
 			while(!video.is_open())
 			{	system("sleep 1"); video.open(basestation_results_file.c_str());	}
 			video.close();			
 
 			//Either continue with the next element in the queue, or start the cyclic executive again
-			remove(basestation_results_file.c_str());
 		}
 
 		//Empty the local queue cache

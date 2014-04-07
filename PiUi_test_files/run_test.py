@@ -9,9 +9,9 @@ def run():
 	test_number = sys.argv[2]
 	video_name = 'Test' + test_number+'_'+user_name+'.h264'
 	#Set dynamic time for each individual test
-	time = '7000'
+	time = '10000'
 	#Double check location of video
-	raspivid_com = 'raspivid -n -o ../Temp_Videos/'+video_name+' -br 60 -rot 90 -t'+time
+	raspivid_com = 'raspivid -n -o ../Temp_Videos/'+video_name+' -br 60 -rot 90 -t '+time
 
 	print "Beginning eye test "+test_number
 
@@ -21,4 +21,4 @@ def run():
 	print "Test "+test_number+" complete!"
 
 
-
+run()
