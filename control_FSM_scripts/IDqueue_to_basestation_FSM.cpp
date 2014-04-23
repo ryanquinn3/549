@@ -18,7 +18,8 @@ void* FSM1(void*);
 void* FSM2(void*);
 
 string test_request_file = "/home/pi/549/test_headers.txt";
-string basestation_results_file = "/home/pi/549/OCV_pupil_measurements.txt";
+string basestation_results_file = "/home/pi/549/results_file.txt";
+string results_file_cache_directory = "/home/pi/549/OCV_Results/";
 
 int T1_video_done = 0;
 
@@ -153,14 +154,14 @@ void* FSM2(void* arg)
 			
 
 			//Create the metafile for this video
-			ofstream metastream("metafile.txt");
+			ofstream metastream("request_header.txt");
 			metastream << queue_contents[i].user << endl;
 			metastream << queue_contents[i].ID << endl;
 			metastream << queue_contents[i].testNum << endl;
 			metastream.close();
 
 			cout << "T1: Video file " << video_filename << " found " << endl;
-			string scp_command = "scp -c blowfish -i /home/pi/.ssh/id_rsa " + video_filename + " metafile.txt apfeifer@192.168.1.4:/home/apfeifer/549/";
+			string scp_command = "scp -c blowfish -i /home/pi/.ssh/id_rsa " + video_filename + " request_header.txt apfeifer@192.168.1.6:/home/apfeifer/549/";
 			system(scp_command.c_str());
 
 			//Delete the video file once it's sent
@@ -175,8 +176,11 @@ void* FSM2(void* arg)
 			video.close();			
 
 			//Either continue with the next element in the queue, or start the cyclic executive again
-			delete_command = "sudo rm " + basestation_results_file;
-			system(delete_command.c_str());
+			//But first, file away the results file
+
+			//Format as: USERNAME_TESTNUM_BASELINE?.txt
+			string cache_command = "sudo mv " + basestation_results_file + " " + results_file_cache_directory + queue_contents[i].user + "_" + queue_contents[i].testNum + queue_contents[i].ID + ".txt"; 
+			system(cache_command.c_str());
 		}
 
 		//Empty the local queue cache
